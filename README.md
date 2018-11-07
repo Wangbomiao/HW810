@@ -13,10 +13,9 @@ class Repositor:
         self.paths=paths
         self.st=dict()
         self.ins=dict()
-        self.maj=dict()
-
-    def student(self):
-        stpath=os.path.join(self.paths,'students.txt')
+        
+    def student(self,path):
+        stpath=os.path.join(self.paths,path)
 
         for cwid,name,major in filereader(stpath,3,sep='\t',header=False):
             if cwid in self.st:
@@ -24,8 +23,8 @@ class Repositor:
             else:
                 self.st[cwid]=Student(cwid,name,major)
 
-    def instuctor(self):
-        inspath=os.path.join(self.paths,'instructors.txt')
+    def instuctor(self,path):
+        inspath=os.path.join(self.paths,path)
 
         for cwid,name,dept in filereader(inspath,3,sep='\t',header=False):
             if cwid in self.ins:
@@ -33,68 +32,26 @@ class Repositor:
             else:
                 self.ins[cwid]=Instuctor(cwid,name,dept)
 
-    def grade(self):
-        gradepath=os.path.join(self.paths,'grades.txt')
+    def grade(self,path):
+        gradepath=os.path.join(self.paths,path)
 
         for stcwid,course,grade,inscwid in filereader(gradepath,4,sep='\t',header=False):
-            
+
             if stcwid in self.st:
                 self.st[stcwid].add_course(course,grade)
-
-                if course in self.maj[self.st[stcwid].major].required:
-                
-                    if grade in ['A','A-','B','B-','C+','C']:
-                        self.st[stcwid].re.add(course)
-
-                elif course in self.maj[self.st[stcwid].major].electives:
-
-                    if grade in ['A','A-','B','B-','C+','C']:
-                        self.st[stcwid].ele.add(course)
-
             else:
                 raise Exception('Warning : student cwid {} already read from the file'.format(stcwid))
 
-
             if inscwid in self.ins:
                 self.ins[inscwid].add_coursenum(course)
-
             else:
                 raise Exception('Warning : instuctor cwid {} already read from the file'.format(inscwid))
-
-    def major(self):
-        majpath=os.path.join(self.paths,'majors.txt')
-
-        for major,flag,course in filereader(majpath,3,sep="\t",header=False):
-
-            if major not in self.maj:
-                self.maj[major]=Major(major)
-                self.maj[major].addcourse(flag,course)
-
-            else:
-                self.maj[major].addcourse(flag,course)
-
-    def mapt(self):
-        mapt=PrettyTable(field_names=['dept','required','electives'])
-
-        for key in self.maj:
-            mapt.add_row([key,self.maj[key].required,self.maj[key].electives])
-
-        print(mapt)
-
+    
     def stpt(self):
-        stpt=PrettyTable(field_names=['cwid','name','completed course','remain required','remain electives'])
+        stpt=PrettyTable(field_names=['cwid','name','completed course'])
 
         for key in self.st:
-
-            re=self.maj[self.st[key].major].required-self.st[key].re
-
-            if self.st[key].ele==set():
-                ele=self.maj[self.st[key].major].electives
-            else:
-                ele=None
-
-            stpt.add_row([key,self.st[key].name,list(self.st[key].cour.keys()),re,ele])
-
+            stpt.add_row([key,self.st[key].name,list(self.st[key].cour.items())])
         print(stpt)
     
     def inspt(self):
@@ -103,23 +60,8 @@ class Repositor:
         for key in self.ins:
             for key1 in self.ins[key].cournum:
                 inspt.add_row([key,self.ins[key].name,self.ins[key].dept,key1,self.ins[key].cournum[key1]])
-
         print(inspt)
 
-
-class Major:
-    def __init__(self,major):
-        self.major=major
-        self.required=set()
-        self.electives=set()
-    def addcourse(self,flag,course):
-        if flag=='R':
-            self.required.add(course)
-        elif flag=='E':
-            self.electives.add(course)
-        else:
-            raise ValueError('the flag {flag} is not defined')
-    
 
 class Student:
 
@@ -128,12 +70,10 @@ class Student:
         self.name=name
         self.major=major
         self.cour=dict()
-        self.re=set()
-        self.ele=set()
 
     def add_course(self,course,grade):
         self.cour[course]=grade
-   
+
     def stptstring(self):
         return [self.cwid,self.name,self.major,sorted(self.cour.items())]
     
@@ -156,14 +96,11 @@ class Instuctor:
 class RepositorTest(unittest.TestCase):
     def testrepositor(self):
         stevens=Repositor(r'C:\Users\wangd\学习和作业需要\810\week9资料')
-        stevens.student()
-        stevens.instuctor()
-        stevens.major()
-        stevens.grade()
+        stevens.student('students.txt')
+        stevens.instuctor('instructors.txt')
+        stevens.grade('grades.txt')
         stevens.inspt()
         stevens.stpt()
-        stevens.mapt()
-        '''
         student_details=[s.stptstring() for s in stevens.st.values()]
         instucroe_details=[i.insstring(course,student) for i in stevens.ins.values() for course,student in i.cournum.items() ]
         students=[['10103', 'Baldwin, C', 'SFEN', [('CS 501', 'B'), ('SSW 564', 'A-'), ('SSW 567', 'A'), ('SSW 687', 'B')]],\
@@ -190,7 +127,7 @@ class RepositorTest(unittest.TestCase):
                   ['98760', 'Darwin, C', 'SYEN', 'SYS 645', 1]]
         self.assertEqual(student_details,students)
         self.assertEqual(instucroe_details,instuctor)
-'''
+
 
 if __name__ == '__main__':
     # note: there is no main(). Only test cases here
